@@ -1,6 +1,4 @@
 /*
-Author: Eyal kahanovich
-Date: 24/12/2025
 This program is an implementation of malloc that i wrote in order to learn about malloc(), mmap() and, the heap
 */
 
