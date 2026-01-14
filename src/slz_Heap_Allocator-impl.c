@@ -50,13 +50,13 @@ int slz_heap_initialize_impl(struct Heap_metadata_t* heapMetadata) {
     }
 
     struct Heap_chunk_t* heapHead_chunk = (struct Heap_chunk_t*) Heap_start_addr;
-    heapHead_chunk -> size = length_pgsize - sizeof(struct Heap_chunk_t); //calculate size of heap = pgsize - sizeof(heapHead_chunk)
-    heapHead_chunk -> is_inuse = false;
-    heapHead_chunk -> heapChunk_nextNode = NULL; 
+    heapHead_chunk->size = length_pgsize - sizeof(struct Heap_chunk_t); //calculate size of heap = pgsize - sizeof(heapHead_chunk)
+    heapHead_chunk->is_inuse = false;
+    heapHead_chunk->heapChunk_nextNode = NULL; 
 
-    heapMetadata -> Heap_start_address = Heap_start_addr;
-    heapMetadata -> size_avail = length_pgsize - sizeof(struct Heap_chunk_t);
-    heapMetadata -> isInit = true;
+    heapMetadata->Heap_start_address = Heap_start_addr;
+    heapMetadata->size_avail = length_pgsize - sizeof(struct Heap_chunk_t);
+    heapMetadata->isInit = true;
     return HEAP_SUCCESS;
 }
 
@@ -74,8 +74,8 @@ void* slz_Heap_Allocator_impl(size_t size){
     }
 
     struct Heap_chunk_t* alloc_Chunk = metadata.Heap_start_address;
-    while (alloc_Chunk != NULL && (alloc_Chunk -> size < size || alloc_Chunk -> is_inuse == true)) {
-        alloc_Chunk = alloc_Chunk -> heapChunk_nextNode;
+    while (alloc_Chunk != NULL && (alloc_Chunk->size < size || alloc_Chunk->is_inuse == true)) {
+        alloc_Chunk = alloc_Chunk->heapChunk_nextNode;
     }
 
     //searches for a chunk that isnt in use and has a at least equal size to the requested size.
@@ -84,17 +84,17 @@ void* slz_Heap_Allocator_impl(size_t size){
     }
 
     //if chunk size greater than size: 'chop' chunk, give size in chunk and 'chunkify' the rest of the chunk
-    else if (size + MINIMUM_SIZE < alloc_Chunk -> size) {
+    else if (size + MINIMUM_SIZE < alloc_Chunk->size) {
         //choppedChunk should start at address of alloc_Chunk's data + size because we are chopping it to inuse and not inuse chunks
         struct Heap_chunk_t* choppedChunk = (struct Heap_chunk_t*)((char*)alloc_Chunk + sizeof(struct Heap_chunk_t) + size);
-        choppedChunk -> size = alloc_Chunk -> size - size - sizeof(struct Heap_chunk_t);//choppedChunk's size is equal to the non chopped's size - requested size - metadata size
-        choppedChunk -> is_inuse = false;//flag chopped chunk as unused
-        choppedChunk -> heapChunk_nextNode = alloc_Chunk -> heapChunk_nextNode;//make choppedChunk point to the same chunk it pointed to before 'choppification'
+        choppedChunk->size = alloc_Chunk->size - size - sizeof(struct Heap_chunk_t);//choppedChunk's size is equal to the non chopped's size - requested size - metadata size
+        choppedChunk->is_inuse = false;//flag chopped chunk as unused
+        choppedChunk->heapChunk_nextNode = alloc_Chunk->heapChunk_nextNode;//make choppedChunk point to the same chunk it pointed to before 'choppification'
 
         //work on the chunk we will allocate
-        alloc_Chunk -> size = size;
-        alloc_Chunk -> is_inuse = true;
-        alloc_Chunk -> heapChunk_nextNode = choppedChunk;
+        alloc_Chunk->size = size;
+        alloc_Chunk->is_inuse = true;
+        alloc_Chunk->heapChunk_nextNode = choppedChunk;
 
         //return the data
         metadata.size_avail = metadata.size_avail - (size + sizeof(struct Heap_chunk_t)); //available space is smaller by size allocated and chunk metadata size
@@ -146,15 +146,15 @@ int slz_Heap_deAllocator_impl(void* deAllocation_addr) {
     }
 
     struct Heap_chunk_t* deAllocation_chunk = (struct Heap_chunk_t*)((char*)deAllocation_addr - sizeof(struct Heap_chunk_t));//deAllocation_addr points to data, we need a pointer to the chunk metadata before the chunk itself
-    deAllocation_chunk -> is_inuse = false;
-    metadata.size_avail += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> size;
+    deAllocation_chunk->is_inuse = false;
+    metadata.size_avail += sizeof(struct Heap_chunk_t) + deAllocation_chunk->size;
 
 
     //coalescing with next chunk if possible
-    while (deAllocation_chunk -> heapChunk_nextNode != NULL && deAllocation_chunk -> heapChunk_nextNode -> is_inuse == false) {
+    while (deAllocation_chunk->heapChunk_nextNode != NULL && deAllocation_chunk->heapChunk_nextNode->is_inuse == false) {
         //if next chunk is free and not null, coalesce
-        deAllocation_chunk -> size += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> heapChunk_nextNode -> size;
-        deAllocation_chunk -> heapChunk_nextNode = deAllocation_chunk -> heapChunk_nextNode -> heapChunk_nextNode;
+        deAllocation_chunk->size += sizeof(struct Heap_chunk_t) + deAllocation_chunk->heapChunk_nextNode->size;
+        deAllocation_chunk->heapChunk_nextNode = deAllocation_chunk->heapChunk_nextNode->heapChunk_nextNode;
     }
 
     //if at top of heap dont coalesce backwards
@@ -169,8 +169,8 @@ int slz_Heap_deAllocator_impl(void* deAllocation_addr) {
         return HEAP_FAILURE;
     }
 
-    while (prevNode_coalescence -> heapChunk_nextNode != NULL && prevNode_coalescence -> heapChunk_nextNode != deAllocation_chunk) {
-        prevNode_coalescence = prevNode_coalescence -> heapChunk_nextNode;
+    while (prevNode_coalescence->heapChunk_nextNode != NULL && prevNode_coalescence->heapChunk_nextNode != deAllocation_chunk) {
+        prevNode_coalescence = prevNode_coalescence->heapChunk_nextNode;
     }
     //this finds the node behind deAllocation_chunk
     //we should check if it actually finds it
@@ -179,14 +179,14 @@ int slz_Heap_deAllocator_impl(void* deAllocation_addr) {
         return HEAP_FAILURE;
     }
 
-    if (prevNode_coalescence -> is_inuse == false) {
-        if (deAllocation_chunk -> heapChunk_nextNode != NULL) {
-            prevNode_coalescence -> size += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> size;
-            prevNode_coalescence -> heapChunk_nextNode = deAllocation_chunk -> heapChunk_nextNode;
+    if (prevNode_coalescence->is_inuse == false) {
+        if (deAllocation_chunk->heapChunk_nextNode != NULL) {
+            prevNode_coalescence->size += sizeof(struct Heap_chunk_t) + deAllocation_chunk->size;
+            prevNode_coalescence->heapChunk_nextNode = deAllocation_chunk->heapChunk_nextNode;
         }
         else {
-            prevNode_coalescence -> size += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> size;
-            prevNode_coalescence -> heapChunk_nextNode = NULL;
+            prevNode_coalescence->size += sizeof(struct Heap_chunk_t) + deAllocation_chunk->size;
+            prevNode_coalescence->heapChunk_nextNode = NULL;
         }
     }
     //this coalesces the previous node in the free list
@@ -206,14 +206,14 @@ size_t slz_Heap_deAllocator_Sized_impl(void* deAllocation_addr, size_t size) {
 
     //litterly just slz_Heap_deAllocator_impl but returns the size passed to it
     struct Heap_chunk_t* deAllocation_chunk = (struct Heap_chunk_t*)((char*)deAllocation_addr - sizeof(struct Heap_chunk_t));//deAllocation_addr points to data we need pointer to chunk metadata before the chunk
-    deAllocation_chunk -> is_inuse = false;
-    metadata.size_avail += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> size;
+    deAllocation_chunk->is_inuse = false;
+    metadata.size_avail += sizeof(struct Heap_chunk_t) + deAllocation_chunk->size;
 
     //coalescing with next chunk if possible
-    while (deAllocation_chunk -> heapChunk_nextNode != NULL && deAllocation_chunk -> heapChunk_nextNode -> is_inuse == false) {//in this while loop we find deAllocation_chunk=deAllocation_chunk->heapChunk_nextNode
+    while (deAllocation_chunk->heapChunk_nextNode != NULL && deAllocation_chunk->heapChunk_nextNode->is_inuse == false) {//in this while loop we find deAllocation_chunk=deAllocation_chunk->heapChunk_nextNode
         //if next chunk is free and not null, coalesce
-        deAllocation_chunk -> size += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> heapChunk_nextNode -> size;
-        deAllocation_chunk -> heapChunk_nextNode = deAllocation_chunk -> heapChunk_nextNode -> heapChunk_nextNode;
+        deAllocation_chunk->size += sizeof(struct Heap_chunk_t) + deAllocation_chunk->heapChunk_nextNode->size;
+        deAllocation_chunk->heapChunk_nextNode = deAllocation_chunk->heapChunk_nextNode->heapChunk_nextNode;
     }
 
     //if at top of the list: dont coalesce backwards
@@ -229,8 +229,8 @@ size_t slz_Heap_deAllocator_Sized_impl(void* deAllocation_addr, size_t size) {
         return HEAP_FAILURE;
     }
 
-    while (prevNode_coalescence -> heapChunk_nextNode != NULL && prevNode_coalescence -> heapChunk_nextNode != deAllocation_chunk) {
-        prevNode_coalescence = prevNode_coalescence -> heapChunk_nextNode;
+    while (prevNode_coalescence->heapChunk_nextNode != NULL && prevNode_coalescence->heapChunk_nextNode != deAllocation_chunk) {
+        prevNode_coalescence = prevNode_coalescence->heapChunk_nextNode;
     }
     //this finds the node behind deAllocation_chunk
 
@@ -239,16 +239,16 @@ size_t slz_Heap_deAllocator_Sized_impl(void* deAllocation_addr, size_t size) {
         printf("Failed at finding previous node to deAllocation_chunk");
         return HEAP_FAILURE;
     }
-    if (prevNode_coalescence -> heapChunk_nextNode == deAllocation_chunk && deAllocation_chunk != NULL) {
-        if (prevNode_coalescence -> is_inuse == false) {
+    if (prevNode_coalescence->heapChunk_nextNode == deAllocation_chunk && deAllocation_chunk != NULL) {
+        if (prevNode_coalescence->is_inuse == false) {
             //check if the chunk after deAllocation_chunk is null to see if we need to set prev's next chunk to null or to the next chunk after deAllocation_chunk
-            if (deAllocation_chunk -> heapChunk_nextNode != NULL) {
-                prevNode_coalescence -> size += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> size;
-                prevNode_coalescence -> heapChunk_nextNode = deAllocation_chunk -> heapChunk_nextNode;
+            if (deAllocation_chunk->heapChunk_nextNode != NULL) {
+                prevNode_coalescence->size += sizeof(struct Heap_chunk_t) + deAllocation_chunk->size;
+                prevNode_coalescence->heapChunk_nextNode = deAllocation_chunk->heapChunk_nextNode;
             }
             else {
-                prevNode_coalescence -> size += sizeof(struct Heap_chunk_t) + deAllocation_chunk -> size;
-                prevNode_coalescence -> heapChunk_nextNode = NULL;
+                prevNode_coalescence->size += sizeof(struct Heap_chunk_t) + deAllocation_chunk->size;
+                prevNode_coalescence->heapChunk_nextNode = NULL;
             }
         }
     //this coalesces the previous node in the free list
@@ -271,50 +271,50 @@ void* slz_Heap_reAllocator_impl(void* Allocation_address, size_t newSize){
     }
     
     struct Heap_chunk_t* reAlloc_chunk = (struct Heap_chunk_t*)((char*)Allocation_address - sizeof(struct Heap_chunk_t));
-    if (newSize < reAlloc_chunk -> size) {
-        if (reAlloc_chunk -> size - newSize > MINIMUM_SIZE + sizeof(struct Heap_chunk_t)) {
-            size_t remainder_Size = reAlloc_chunk -> size - newSize - sizeof(struct Heap_chunk_t);//calculates the address offset from reAlloc_chunk to new chunk
+    if (newSize < reAlloc_chunk->size) {
+        if (reAlloc_chunk->size - newSize > MINIMUM_SIZE + sizeof(struct Heap_chunk_t)) {
+            size_t remainder_Size = reAlloc_chunk->size - newSize - sizeof(struct Heap_chunk_t);//calculates the address offset from reAlloc_chunk to new chunk
             struct Heap_chunk_t* remainder_Chunk = (struct Heap_chunk_t*)((char*)reAlloc_chunk + sizeof(struct Heap_chunk_t) + newSize);
-            remainder_Chunk -> is_inuse = false;
-            reAlloc_chunk -> size = newSize;
+            remainder_Chunk->is_inuse = false;
+            reAlloc_chunk->size = newSize;
 
-            while (remainder_Chunk -> heapChunk_nextNode != NULL && remainder_Chunk -> heapChunk_nextNode -> is_inuse == false) {
+            while (remainder_Chunk->heapChunk_nextNode != NULL && remainder_Chunk->heapChunk_nextNode->is_inuse == false) {
                 //if next chunk is free and not null, coalesce
-                remainder_Chunk -> size += sizeof(struct Heap_chunk_t) + remainder_Chunk -> heapChunk_nextNode -> size; //gets the next chunk's size
-                remainder_Chunk -> heapChunk_nextNode = remainder_Chunk -> heapChunk_nextNode -> heapChunk_nextNode; //removes next chunk from the free list; Completes the Coalescence
+                remainder_Chunk->size += sizeof(struct Heap_chunk_t) + remainder_Chunk->heapChunk_nextNode->size; //gets the next chunk's size
+                remainder_Chunk->heapChunk_nextNode = remainder_Chunk->heapChunk_nextNode->heapChunk_nextNode; //removes next chunk from the free list; Completes the Coalescence
             }
             return Allocation_address;
         }
     }
 
-    if (reAlloc_chunk -> size < newSize) {
-        if (reAlloc_chunk -> heapChunk_nextNode != NULL 
-            && (newSize <= reAlloc_chunk -> size + sizeof(struct Heap_chunk_t) + reAlloc_chunk -> heapChunk_nextNode -> size) 
-            && (reAlloc_chunk -> heapChunk_nextNode -> is_inuse == false)) {
+    if (reAlloc_chunk->size < newSize) {
+        if (reAlloc_chunk->heapChunk_nextNode != NULL 
+            && (newSize <= reAlloc_chunk->size + sizeof(struct Heap_chunk_t) + reAlloc_chunk->heapChunk_nextNode->size) 
+            && (reAlloc_chunk->heapChunk_nextNode->is_inuse == false)) {
             
-                reAlloc_chunk -> size += sizeof(struct Heap_chunk_t) + reAlloc_chunk -> heapChunk_nextNode -> size;
-            reAlloc_chunk -> heapChunk_nextNode = reAlloc_chunk -> heapChunk_nextNode -> heapChunk_nextNode;
-            if (newSize + MINIMUM_SIZE < reAlloc_chunk -> size) { //if the new chunk's size is too big for newSize then we chop the new chunk into two chunks, one that is newSize'd and one that is the other part
+                reAlloc_chunk->size += sizeof(struct Heap_chunk_t) + reAlloc_chunk->heapChunk_nextNode->size;
+            reAlloc_chunk->heapChunk_nextNode = reAlloc_chunk->heapChunk_nextNode->heapChunk_nextNode;
+            if (newSize + MINIMUM_SIZE < reAlloc_chunk->size) { //if the new chunk's size is too big for newSize then we chop the new chunk into two chunks, one that is newSize'd and one that is the other part
                 size_t remainingSize = reAlloc_chunk->size - newSize - sizeof(struct Heap_chunk_t);
                 struct Heap_chunk_t* choppedChunk = (struct Heap_chunk_t*)(char*)reAlloc_chunk + sizeof(struct Heap_chunk_t) + newSize;
 
-                choppedChunk -> size = remainingSize;
-                choppedChunk -> is_inuse = false;
-                choppedChunk -> heapChunk_nextNode = reAlloc_chunk -> heapChunk_nextNode;
+                choppedChunk->size = remainingSize;
+                choppedChunk->is_inuse = false;
+                choppedChunk->heapChunk_nextNode = reAlloc_chunk->heapChunk_nextNode;
                 
-                reAlloc_chunk -> size = newSize;
-                reAlloc_chunk -> heapChunk_nextNode = choppedChunk;
+                reAlloc_chunk->size = newSize;
+                reAlloc_chunk->heapChunk_nextNode = choppedChunk;
                 return Allocation_address;
             }
         }
 
-        if (reAlloc_chunk -> heapChunk_nextNode != NULL && (reAlloc_chunk -> heapChunk_nextNode -> is_inuse == true | reAlloc_chunk -> heapChunk_nextNode -> size < newSize - reAlloc_chunk -> size)) {
+        if (reAlloc_chunk->heapChunk_nextNode != NULL && (reAlloc_chunk->heapChunk_nextNode->is_inuse == true | reAlloc_chunk->heapChunk_nextNode->size < newSize - reAlloc_chunk->size)) {
             void* allocation_ptr = slz_Heap_Allocator_impl(newSize);
             if (allocation_ptr == NULL) {
                 printf("Failure calling malloc in reAlloc function!\n");
                 return NULL;
             }
-            memcpy(allocation_ptr,Allocation_address, reAlloc_chunk -> size);
+            memcpy(allocation_ptr,Allocation_address, reAlloc_chunk->size);
             int free_status = slz_Heap_deAllocator_impl(Allocation_address);
             if (free_status == HEAP_FAILURE) {
                 printf("failure calling heap_deallocator in realloc\n");
